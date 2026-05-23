@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using Microsoft.Data.Sqlite;
 using ModelContextProtocol.Server;
+using LensHH.StockMcp.Writers;
 
 namespace LensHH.StockMcp.Tools
 {
@@ -195,6 +196,151 @@ namespace LensHH.StockMcp.Tools
             catch (Exception ex)
             {
                 return $"export_lhlt failed: {ex.Message}";
+            }
+        }
+
+        // ── export_optiland ─────────────────────────────────────────────────
+
+        [McpServerTool, Description(
+            "Export a stock lens to Optiland .json format (engine-free). Reads the "
+            + "bundled .lhlt prescription, deserializes it via the standalone DTOs, "
+            + "and writes Optiland's canonical JSON layout — version 1.0 header, "
+            + "aperture/fields/wavelengths blocks, surface_group with per-surface "
+            + "geometry + material_pre/material_post. Infinite radii and object-"
+            + "space thicknesses emit literal 'Infinity' / '-Infinity' tokens per "
+            + "Optiland convention. Provide partNumber and an absolute outputPath "
+            + "(directory or .json file). Returns source + destination on success.")]
+        public string ExportOptiland(string partNumber, string outputPath, string? vendor = null)
+        {
+            if (string.IsNullOrWhiteSpace(outputPath))
+                return "outputPath is required.";
+
+            try
+            {
+                var (resolvedVendor, lhltRel) = StockCatalog.ResolvePart(partNumber, vendor);
+                string src = StockCatalog.ResolveLhltPath(lhltRel);
+
+                string dst = outputPath;
+                if (Directory.Exists(outputPath))
+                    dst = Path.Combine(outputPath, $"{resolvedVendor}_{partNumber}.json");
+
+                Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(dst))!);
+
+                LhltFile lens = LhltReader.Read(src);
+                OptilandWriter.Write(lens, dst);
+                long size = new FileInfo(dst).Length;
+                return $"Exported {resolvedVendor}/{partNumber} to Optiland format.\n"
+                     + $"  source: {src}\n  dest:   {dst}\n  size:   {size} bytes";
+            }
+            catch (Exception ex)
+            {
+                return $"export_optiland failed: {ex.Message}";
+            }
+        }
+
+        // ── export_zemax ────────────────────────────────────────────────────
+
+        [McpServerTool, Description(
+            "Export a stock lens to ZEMAX .zmx text format (engine-free). Reads the "
+            + "bundled .lhlt prescription via the standalone DTOs and writes ZEMAX's "
+            + "sequential-mode text format (VERS/MODE/UNIT header, ENPD/FNUM aperture, "
+            + "FTYP/RAIM, XFLN/YFLN/FWGN, WAVM, SURF blocks with CURV/DISZ/GLAS/DIAM/"
+            + "CONI/CLAP/PARM). Output is UTF-16 LE with BOM as ZEMAX requires; "
+            + "mixed-case 'Infinity' is rejected so DISZ uses 'INFINITY' (all caps). "
+            + "Provide partNumber and an absolute outputPath (directory or .zmx file). "
+            + "Returns source + destination on success.")]
+        public string ExportZemax(string partNumber, string outputPath, string? vendor = null)
+        {
+            if (string.IsNullOrWhiteSpace(outputPath))
+                return "outputPath is required.";
+
+            try
+            {
+                var (resolvedVendor, lhltRel) = StockCatalog.ResolvePart(partNumber, vendor);
+                string src = StockCatalog.ResolveLhltPath(lhltRel);
+
+                string dst = outputPath;
+                if (Directory.Exists(outputPath))
+                    dst = Path.Combine(outputPath, $"{resolvedVendor}_{partNumber}.zmx");
+
+                Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(dst))!);
+
+                LhltFile lens = LhltReader.Read(src);
+                ZmxWriter.Write(lens, dst);
+                long size = new FileInfo(dst).Length;
+                return $"Exported {resolvedVendor}/{partNumber} to ZEMAX format.\n"
+                     + $"  source: {src}\n  dest:   {dst}\n  size:   {size} bytes";
+            }
+            catch (Exception ex)
+            {
+                return $"export_zemax failed: {ex.Message}";
+            }
+        }
+
+        // ── export_oslo / export_codev / export_optalix ─────────────────────
+
+        [McpServerTool, Description(
+            "Export a stock lens to OSLO .len format (engine-free). Reads the bundled "
+            + ".lhlt prescription and writes OSLO's LEN NEW / SRF / NXT / END structure "
+            + "with TH, RD, GLA, AST, CC, AD..AJ aspherics, AP CHK, and APN/AY/AX zones "
+            + "for central obscurations. Title is sanitized (32-char cap, no quotes) for "
+            + "LEN NEW; full title preserved in SNO1. Provide partNumber and outputPath "
+            + "(directory or .len file). Returns source + destination on success.")]
+        public string ExportOslo(string partNumber, string outputPath, string? vendor = null)
+            => ExportWith(partNumber, outputPath, vendor, ".len", OsloWriter.Write, "OSLO", "export_oslo");
+
+        [McpServerTool, Description(
+            "Export a stock lens to Code V .seq sequence format (engine-free). Reads the "
+            + "bundled .lhlt prescription and writes Code V's RDM;LEN / DIM M header, EPD "
+            + "or FNO aperture, WL/WTW/REF wavelengths, XAN/YAN/WTF fields, and S/SO/SI "
+            + "surface blocks with STO, CIR, CON, ASP. Schott N-prefix glass names emit "
+            + "without the dash (N-SF10 → NSF10) to match Code V's naming. Provide "
+            + "partNumber and outputPath (directory or .seq file).")]
+        public string ExportCodeV(string partNumber, string outputPath, string? vendor = null)
+            => ExportWith(partNumber, outputPath, vendor, ".seq", CodeVWriter.Write, "Code V", "export_codev");
+
+        [McpServerTool, Description(
+            "Export a stock lens to Optalix .OTX format (engine-free). Reads the bundled "
+            + ".lhlt prescription and writes Optalix's VERS/FILE header, RAIM, EPD, WL, "
+            + "FTYP/NFLD/FLD fields, and SUR blocks with SUT (S/A/M/AM), CUY, THI, GLA, "
+            + "STO, APE 1 (clear aperture), APE 2 (obscuration), COM, ASP. Image surface "
+            + "thickness is encoded as -999 per Optalix convention. Provide partNumber "
+            + "and outputPath (directory or .otx file).")]
+        public string ExportOptalix(string partNumber, string outputPath, string? vendor = null)
+            => ExportWith(partNumber, outputPath, vendor, ".otx", OptalixWriter.Write, "Optalix", "export_optalix");
+
+        private static string ExportWith(
+            string partNumber,
+            string outputPath,
+            string? vendor,
+            string extension,
+            Action<LhltFile, string> writer,
+            string formatLabel,
+            string toolName)
+        {
+            if (string.IsNullOrWhiteSpace(outputPath))
+                return "outputPath is required.";
+
+            try
+            {
+                var (resolvedVendor, lhltRel) = StockCatalog.ResolvePart(partNumber, vendor);
+                string src = StockCatalog.ResolveLhltPath(lhltRel);
+
+                string dst = outputPath;
+                if (Directory.Exists(outputPath))
+                    dst = Path.Combine(outputPath, $"{resolvedVendor}_{partNumber}{extension}");
+
+                Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(dst))!);
+
+                LhltFile lens = LhltReader.Read(src);
+                writer(lens, dst);
+                long size = new FileInfo(dst).Length;
+                return $"Exported {resolvedVendor}/{partNumber} to {formatLabel} format.\n"
+                     + $"  source: {src}\n  dest:   {dst}\n  size:   {size} bytes";
+            }
+            catch (Exception ex)
+            {
+                return $"{toolName} failed: {ex.Message}";
             }
         }
 

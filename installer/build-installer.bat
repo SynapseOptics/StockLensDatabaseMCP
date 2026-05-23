@@ -14,8 +14,16 @@ if errorlevel 1 (
 
 echo.
 echo === Compiling Installer ===
+REM STOCK_CATALOGS_DIR (optional) lets a builder point the installer
+REM at a non-default catalog source — useful when the sibling
+REM SynapseLensHH-LT repo isn't checked out at the usual location.
+set ISCC_ARGS=
+if defined STOCK_CATALOGS_DIR (
+    echo Catalog source: %STOCK_CATALOGS_DIR%
+    set ISCC_ARGS=/DSourceCatalogs="%STOCK_CATALOGS_DIR%"
+)
 if exist "%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe" (
-    "%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe" installer\StockLensDatabaseMCP.iss
+    "%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe" %ISCC_ARGS% installer\StockLensDatabaseMCP.iss
     if errorlevel 1 (
         echo Inno Setup compile failed!
         exit /b 1

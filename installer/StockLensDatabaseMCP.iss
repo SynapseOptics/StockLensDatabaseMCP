@@ -17,12 +17,19 @@
 #define ConfigBin RepoRoot + "\src\ConfigureLensHHStockMcp\bin\Release\net8.0-windows"
 #define Assets    RepoRoot + "\assets"
 
-; Optional catalog source. The catalogs directory ships with the
-; LensHH-LT install; if a sibling LT repo is present we bundle it,
-; otherwise we install without and the user is expected to point
-; LENSHH_CATALOGS_DIR at an existing catalogs directory (typically
-; their LensHH-LT install).
-#define LTCatalogs RepoRoot + "\..\SynapseLensHH-LT\LensHH-LT\catalogs"
+; Stock-lens catalog source. The catalog ships with this installer —
+; users should NOT need to obtain it from a separate LensHH-LT install.
+; SourceCatalogs can be overridden at compile time with ISCC's /D flag:
+;   ISCC.exe /DSourceCatalogs="C:\path\to\catalogs" StockLensDatabaseMCP.iss
+; The default points at the sibling SynapseLensHH-LT working tree, which
+; is where release builds typically draw it from.
+#ifndef SourceCatalogs
+  #define SourceCatalogs RepoRoot + "\..\SynapseLensHH-LT\LensHH-LT\catalogs"
+#endif
+
+#if !FileExists(SourceCatalogs + "\stock-lens-catalog.sqlite")
+  #error Cannot find stock-lens-catalog.sqlite at the SourceCatalogs path defined above. The installer requires the catalog to be bundled; aim SourceCatalogs at a populated catalogs/ directory (e.g. SynapseLensHH-LT\LensHH-LT\catalogs) and rerun ISCC.
+#endif
 
 [Setup]
 ; A FRESH GUID — distinct from LensHH-LT's installer so both can be
@@ -76,16 +83,18 @@ Source: "{#RepoRoot}\LICENSE";   DestDir: "{app}"; Flags: ignoreversion
 ; ── Icon ──────────────────────────────────────────────────────────
 Source: "{#Assets}\icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 
-; ── OPTIONAL: stock-lens catalog (if a sibling LensHH-LT repo is
-;    present at build time). Uses skipifsourcedoesntexist so the
-;    installer still builds when LT is not available.
-Source: "{#LTCatalogs}\stock-lens-catalog.sqlite"; DestDir: "{app}\catalogs"; Flags: ignoreversion skipifsourcedoesntexist
-Source: "{#LTCatalogs}\Lenses\*.lhlt"; DestDir: "{app}\catalogs\Lenses"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
+; ── Stock-lens catalog (REQUIRED) ─────────────────────────────────
+; SQLite + per-lens .lhlt prescriptions. Compile-time check above
+; guarantees these sources exist at build time. We deliberately do
+; NOT pull _logs, csv-export, scripts, FilteredGlassCatalogues, or
+; Glass — only what the MCP needs at runtime.
+Source: "{#SourceCatalogs}\stock-lens-catalog.sqlite"; DestDir: "{app}\catalogs"; Flags: ignoreversion
+Source: "{#SourceCatalogs}\Lenses\*.lhlt"; DestDir: "{app}\catalogs\Lenses"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 ; Start Menu
 Name: "{group}\Configure Stock-MCP for Claude"; Filename: "{app}\config\{#MyAppExeName}"; IconFilename: "{app}\icon.ico"
-Name: "{group}\Catalogs Folder";                Filename: "{app}\catalogs"; Check: CatalogsBundled
+Name: "{group}\Catalogs Folder";                Filename: "{app}\catalogs"
 Name: "{group}\README";                         Filename: "{app}\README.md"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 ; Desktop
@@ -95,11 +104,6 @@ Name: "{autodesktop}\{#MyAppName} Configure"; Filename: "{app}\config\{#MyAppExe
 Filename: "{app}\config\{#MyAppExeName}"; Description: "{cm:LaunchProgram,Configure for Claude}"; Flags: nowait postinstall skipifsilent
 
 [Code]
-function CatalogsBundled: Boolean;
-begin
-  Result := FileExists(ExpandConstant('{app}\catalogs\stock-lens-catalog.sqlite'));
-end;
-
 function DotNet8DesktopRuntimeExists: Boolean;
 var
   FindRec: TFindRec;
