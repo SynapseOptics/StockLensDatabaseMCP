@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Standalone Windows GUI utility to register LensHH.StockMcp with
+    Claude Desktop and Claude Code. Mirrors ConfigureLensHHMcp but
+    targets the engine-free StockMcp binary and additionally captures
+    the LENSHH_CATALOGS_DIR environment variable so the MCP can find
+    the stock-lens catalog SQLite + .lhlt tree at runtime regardless
+    of install location.
+  -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>ConfigureLensHHStockMcp</RootNamespace>
+    <AssemblyName>ConfigureLensHHStockMcp</AssemblyName>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableWindowsTargeting Condition="'$(OS)' != 'Windows_NT'">true</EnableWindowsTargeting>
+    <ApplicationIcon>..\..\assets\icon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="..\..\assets\icon.ico" Link="icon.ico" />
+  </ItemGroup>
+
+</Project>

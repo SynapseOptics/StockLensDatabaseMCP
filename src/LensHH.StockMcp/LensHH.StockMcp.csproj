@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Standalone MCP server for the LensHH-LT stock-lens catalog.
+
+    Intentionally engine-free: depends on Microsoft.Data.Sqlite +
+    ModelContextProtocol only. No reference to LensHH.Core or any of
+    the engine-coupled IO writers. Ships as a self-contained binary
+    that can browse + export from the stock catalog without the
+    optical-design runtime.
+
+    Currently scope (P1): query + .lhlt export.
+    Future (P2): export to ZEMAX/CodeV/OSLO/Optalix/Optiland via a
+    pure-DTO writer layer that lives alongside this project.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>LensHH.StockMcp</RootNamespace>
+    <AssemblyName>LensHH.StockMcp</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" Version="1.1.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
+  </ItemGroup>
+
+</Project>

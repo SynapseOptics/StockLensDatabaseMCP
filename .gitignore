@@ -1,0 +1,19 @@
+# .NET build outputs
+bin/
+obj/
+
+# IDE / VS state
+.vs/
+*.user
+*.suo
+*.DotSettings.user
+
+# Test results
+TestResults/
+
+# Microsoft Office lock files (created when a document is open)
+~$*
+
+# OS junk
+Thumbs.db
+.DS_Store
