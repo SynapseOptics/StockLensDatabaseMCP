@@ -154,10 +154,6 @@ claude mcp add --transport stdio --scope user `
   Optalix (`.otx`), and Optiland (`.json`) via a pure-DTO writer
   layer that doesn't pull in the LensHH-LT engine. **Done** — byte-
   identical to the engine writers across the verified sample.
-- **P3** — element-replacement workflow: read a user-provided
-  prescription in any of the six formats, replace a designated
-  element with a stock part, write the result in the same (or a
-  different) format.
 
 ## License
 
