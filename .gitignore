@@ -17,3 +17,7 @@ TestResults/
 # OS junk
 Thumbs.db
 .DS_Store
+
+# Installer build outputs (the .exe is large; release artifacts get
+# attached to GitHub Releases instead of committed)
+installer/Output/
