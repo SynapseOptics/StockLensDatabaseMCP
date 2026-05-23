@@ -25,16 +25,22 @@ and prescription export.
 |---|---|
 | `search_stock` | Filter the catalog by EFL / diameter / F-number / element-count / vendor / family / glass. Optional ranges. Returns one line per result. |
 | `get_lens_details` | Dump the full `stock_lenses` row + every `lens_surfaces` row for a given part number. |
-| `export_lhlt` | Byte-copy a stock lens's native `.lhlt` prescription to a user-specified path. |
-| `export_optiland` | Export to Optiland `.json`. |
-| `export_zemax` | Export to ZEMAX `.zmx` (UTF-16 LE with BOM, per ZEMAX's parser). |
-| `export_oslo` | Export to OSLO `.len`. |
-| `export_codev` | Export to Code V `.seq`. |
-| `export_optalix` | Export to Optalix `.otx`. |
+| `export_lens` | Export a stock lens prescription in any supported format (see below). Picks the writer based on the `format` argument. |
 | `list_vendors` | Distinct vendors in the catalog with part counts. |
 | `list_glasses` | Distinct glass names with usage counts (via SQLite `json_each` on `glass_names_json`). |
 
-All export tools are engine-free: each reads the bundled `.lhlt` prescription via standalone DTOs and writes the target format directly. Output is byte-identical to the equivalent LensHH-LT export pipeline.
+### `export_lens` formats
+
+| `format` | Output | Aliases | Notes |
+|---|---|---|---|
+| `lhlt` | `.lhlt` | — | Native LensHH-LT JSON. Byte-copied from the catalog; no DTO round-trip. |
+| `optiland` | `.json` | `json` | Optiland canonical JSON layout. |
+| `zemax` | `.zmx` | `zmx` | ZEMAX sequential-mode text, UTF-16 LE with BOM. |
+| `oslo` | `.len` | `len` | OSLO 5.10 lens file. |
+| `codev` | `.seq` | `seq` | Code V sequence file; Schott N-prefix dashes stripped. |
+| `optalix` | `.otx` | `otx` | Optalix prescription. |
+
+All non-lhlt formats are engine-free: each reads the bundled `.lhlt` prescription via standalone DTOs and writes the target format directly. Output is byte-identical to the equivalent LensHH-LT export pipeline.
 
 ## Catalog location
 
