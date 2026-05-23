@@ -33,7 +33,7 @@ and prescription export.
 
 | `format` | Output | Aliases | Notes |
 |---|---|---|---|
-| `lhlt` | `.lhlt` | — | Native LensHH-LT JSON. Byte-copied from the catalog; no DTO round-trip. |
+| `lhlt` | `.lhlt` | — | Native LensHH-LT JSON. Byte-copied from the catalog when `reversed=false`; serialized from DTOs when `reversed=true`. |
 | `optiland` | `.json` | `json` | Optiland canonical JSON layout. |
 | `zemax` | `.zmx` | `zmx` | ZEMAX sequential-mode text, UTF-16 LE with BOM. |
 | `oslo` | `.len` | `len` | OSLO 5.10 lens file. |
@@ -41,6 +41,10 @@ and prescription export.
 | `optalix` | `.otx` | `otx` | Optalix prescription. |
 
 All non-lhlt formats are engine-free: each reads the bundled `.lhlt` prescription via standalone DTOs and writes the target format directly. Output is byte-identical to the equivalent LensHH-LT export pipeline.
+
+### Exporting a reversed lens
+
+Pass `reversed=true` to `export_lens` to write the prescription flipped front-to-back. The refractive surface order is reversed, each radius negates, and thickness/material associations shift so the physical lens (and its optical power) are preserved — only orientation changes. OBJ, IMG, and any front-of-system stop plane stay put. Useful for hand-composing Plössl-style systems: pull the same stock doublet twice, once normal and once reversed, then assemble in your design tool.
 
 ## Catalog location
 

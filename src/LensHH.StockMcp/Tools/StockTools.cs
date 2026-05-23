@@ -171,18 +171,31 @@ namespace LensHH.StockMcp.Tools
             + "and writes the requested format directly. Output is byte-identical to "
             + "the equivalent LensHH-LT engine pipeline.\n\n"
             + "Supported formats (case-insensitive):\n"
-            + "  lhlt     — native LensHH-LT JSON, byte-copied from the catalog\n"
+            + "  lhlt     — native LensHH-LT JSON\n"
             + "  optiland — Optiland .json (alias: json)\n"
             + "  zemax    — ZEMAX .zmx text, UTF-16 LE with BOM (alias: zmx)\n"
             + "  oslo     — OSLO .len (alias: len)\n"
             + "  codev    — Code V .seq sequence file (alias: seq)\n"
             + "  optalix  — Optalix .otx (alias: otx)\n\n"
             + "Provide partNumber, format, and outputPath. If outputPath is an "
-            + "existing directory, the filename is derived as {vendor}_{part}{ext}. "
+            + "existing directory, the filename is derived as {vendor}_{part}{ext} "
+            + "(or {vendor}_{part}_rev{ext} when reversed=true).\n\n"
+            + "Set reversed=true to export the lens flipped front-to-back — the "
+            + "refractive surface order is reversed, each radius is negated, and "
+            + "thickness/material associations shift to preserve the physical lens. "
+            + "Useful for composing Plössl-style systems by hand: pull each stock "
+            + "doublet twice (one normal, one reversed) and assemble in your design "
+            + "tool. Optical power is preserved by the reversal; only orientation "
+            + "changes. The Title gets a ' (reversed)' suffix to mark the file.\n\n"
             + "The vendor argument is optional — supply only when two vendors share "
             + "the same part_number. Returns resolved source, destination, and file "
             + "size on success.")]
-        public string ExportLens(string partNumber, string format, string outputPath, string? vendor = null)
+        public string ExportLens(
+            string partNumber,
+            string format,
+            string outputPath,
+            string? vendor = null,
+            bool reversed = false)
         {
             if (string.IsNullOrWhiteSpace(outputPath))
                 return "outputPath is required.";
@@ -197,7 +210,7 @@ namespace LensHH.StockMcp.Tools
             switch (fmt)
             {
                 case "lhlt":
-                    ext = ".lhlt"; label = "lhlt";     writer = null;                break;
+                    ext = ".lhlt"; label = "lhlt";     writer = null;                 break;
                 case "optiland": case "json":
                     ext = ".json"; label = "Optiland"; writer = OptilandWriter.Write; break;
                 case "zemax":    case "zmx":
@@ -220,23 +233,33 @@ namespace LensHH.StockMcp.Tools
 
                 string dst = outputPath;
                 if (Directory.Exists(outputPath))
-                    dst = Path.Combine(outputPath, $"{resolvedVendor}_{partNumber}{ext}");
+                {
+                    string suffix = reversed ? "_rev" : "";
+                    dst = Path.Combine(outputPath, $"{resolvedVendor}_{partNumber}{suffix}{ext}");
+                }
 
                 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(dst))!);
 
-                if (writer == null)
+                if (writer == null && !reversed)
                 {
-                    // lhlt is a catalog passthrough — no DTO round-trip, just copy
+                    // lhlt + non-reversed = catalog passthrough, byte-copy
                     File.Copy(src, dst, overwrite: true);
                 }
                 else
                 {
                     LhltFile lens = LhltReader.Read(src);
-                    writer(lens, dst);
+                    if (reversed)
+                        lens = LensReversal.Reverse(lens);
+
+                    if (writer == null)
+                        LhltWriter.Write(lens, dst);  // lhlt + reversed
+                    else
+                        writer(lens, dst);            // any non-lhlt format
                 }
 
                 long size = new FileInfo(dst).Length;
-                return $"Exported {resolvedVendor}/{partNumber} to {label} format.\n"
+                string orient = reversed ? " (reversed)" : "";
+                return $"Exported {resolvedVendor}/{partNumber}{orient} to {label} format.\n"
                      + $"  source: {src}\n  dest:   {dst}\n  size:   {size} bytes";
             }
             catch (Exception ex)
