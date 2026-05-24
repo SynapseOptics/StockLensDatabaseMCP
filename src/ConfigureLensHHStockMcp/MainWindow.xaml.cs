@@ -372,7 +372,12 @@ namespace ConfigureLensHHStockMcp
                 string envFlag = !string.IsNullOrWhiteSpace(_catalogsDir)
                     ? $" --env {CatalogsEnvVar}=\"{_catalogsDir}\""
                     : "";
-                string args = $"mcp add --transport stdio --scope user{envFlag} {ServerName} -- \"{_serverExePath}\"";
+                // --env must come AFTER the server name. The flag is declared
+                // variadic in Claude Code's CLI (`--env <env...>`), so if it
+                // sits before <name>, commander.js keeps consuming tokens —
+                // sucking the name in as another env value — and the parser
+                // then reports "missing required argument 'commandOrUrl'".
+                string args = $"mcp add --transport stdio --scope user {ServerName}{envFlag} -- \"{_serverExePath}\"";
 
                 var psi = CreateClaudeProcess(args);
                 if (psi == null)

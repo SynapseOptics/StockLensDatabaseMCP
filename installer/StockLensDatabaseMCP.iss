@@ -6,7 +6,7 @@
 ; dependency.
 
 #define MyAppName "StockLensDatabaseMCP"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #define MyAppPublisher "Synapse Optics"
 #define MyAppExeName "ConfigureLensHHStockMcp.exe"
 #define MyAppURL "https://github.com/SynapseOptics/StockLensDatabaseMCP"

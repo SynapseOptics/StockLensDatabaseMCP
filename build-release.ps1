@@ -128,8 +128,9 @@ Edit ``~/Library/Application Support/Claude/claude_desktop_config.json``
 
 ``````
 claude mcp add --transport stdio --scope user \
+    lenshh-stock \
     --env LENSHH_CATALOGS_DIR=/absolute/path/to/stocklens-mcp-$Version/catalogs \
-    lenshh-stock -- dotnet /absolute/path/to/stocklens-mcp-$Version/LensHH.StockMcp.dll
+    -- dotnet /absolute/path/to/stocklens-mcp-$Version/LensHH.StockMcp.dll
 ``````
 
 Version: $Version

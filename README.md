@@ -147,8 +147,9 @@ Manual registration alternatives:
 
 ```pwsh
 claude mcp add --transport stdio --scope user `
+  lenshh-stock `
   --env LENSHH_CATALOGS_DIR="C:\Path\To\catalogs" `
-  lenshh-stock -- "C:\Path\To\LensHH.StockMcp.exe"
+  -- "C:\Path\To\LensHH.StockMcp.exe"
 ```
 
 ## Roadmap
