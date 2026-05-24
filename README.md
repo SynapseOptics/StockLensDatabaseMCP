@@ -76,9 +76,9 @@ sudo apt install -y dotnet-runtime-8.0           # Debian/Ubuntu
 sudo dnf install dotnet-runtime-8.0              # Fedora
 
 # 2. download the unix tarball (bundles MCP + catalog)
-curl -fLO https://github.com/SynapseOptics/StockLensDatabaseMCP/releases/latest/download/stocklens-mcp-unix-1.0.0.tar.gz
-tar xzf stocklens-mcp-unix-1.0.0.tar.gz
-cd stocklens-mcp-1.0.0
+curl -fLO https://github.com/SynapseOptics/StockLensDatabaseMCP/releases/latest/download/stocklens-mcp-unix-1.0.1.tar.gz
+tar xzf stocklens-mcp-unix-1.0.1.tar.gz
+cd stocklens-mcp-1.0.1
 
 # 3. register with Claude — see README-UNIX.md inside the tarball for
 #    Claude Desktop config and the `claude mcp add` command for Claude Code.
@@ -113,7 +113,7 @@ Outputs:
 To produce the full release artifact set (Windows installer + Unix tarball + catalog zip):
 
 ```pwsh
-.\build-release.ps1 -Version 1.0.0
+.\build-release.ps1 -Version 1.0.1
 ```
 
 Outputs land in `installer/Output/` and `release/`. See the script's header for what each artifact is.
