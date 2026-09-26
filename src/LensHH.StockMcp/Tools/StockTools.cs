@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Text;
 using Microsoft.Data.Sqlite;
 using ModelContextProtocol.Server;
+using LensHH.StockMcp.Glass;
 using LensHH.StockMcp.Writers;
 
 namespace LensHH.StockMcp.Tools
@@ -168,15 +170,24 @@ namespace LensHH.StockMcp.Tools
         [McpServerTool, Description(
             "Export a stock lens prescription in any supported optical-design format. "
             + "Engine-free: reads the bundled .lhlt prescription via standalone DTOs "
-            + "and writes the requested format directly. Output is byte-identical to "
-            + "the equivalent LensHH-LT engine pipeline.\n\n"
+            + "and writes the requested format directly, as LensHH-LT's own exporters "
+            + "write it - each in the syntax the target program itself writes.\n\n"
             + "Supported formats (case-insensitive):\n"
             + "  lhlt     — native LensHH-LT JSON\n"
-            + "  optiland — Optiland .json (alias: json)\n"
+            + "  optiland — Optiland .json (alias: json). Each glass is written with its "
+            + "own dispersion data, from the bundled AGF catalogs, as Optiland user "
+            + "catalogs in a <file>_glass folder beside the .json, and installed in "
+            + "~/.optiland/catalogs so Optiland on this machine uses exactly that glass; "
+            + "the lens names each glass strictly, so Optiland never substitutes another.\n"
             + "  zemax    — ZEMAX .zmx text, UTF-16 LE with BOM (alias: zmx)\n"
             + "  oslo     — OSLO .len (alias: len)\n"
-            + "  codev    — Code V .seq sequence file (alias: seq)\n"
+            + "  codev    — Code V .seq sequence file (alias: seq). A glass from a catalog Code V "
+            + "ships is written NAME_CATALOG; any other as a private glass (PRV) with its index "
+            + "at each of the lens's wavelengths.\n"
             + "  optalix  — Optalix .otx (alias: otx)\n\n"
+            + "OSLO, Code V and Optalix have no r^2 aspheric term, so a lens with one "
+            + "is refused in those formats rather than written as a different lens. A "
+            + "glass the bundled catalogs do not have is written by name and reported.\n\n"
             + "Provide partNumber, format, and outputPath. If outputPath is an "
             + "existing directory, the filename is derived as {vendor}_{part}{ext} "
             + "(or {vendor}_{part}_rev{ext} when reversed=true).\n\n"
@@ -203,28 +214,11 @@ namespace LensHH.StockMcp.Tools
                 return "format is required (one of: lhlt, optiland, zemax, oslo, codev, optalix).";
 
             string fmt = format.Trim().ToLowerInvariant();
-            string ext;
-            string label;
-            Action<LhltFile, string>? writer;
-
-            switch (fmt)
-            {
-                case "lhlt":
-                    ext = ".lhlt"; label = "lhlt";     writer = null;                 break;
-                case "optiland": case "json":
-                    ext = ".json"; label = "Optiland"; writer = OptilandWriter.Write; break;
-                case "zemax":    case "zmx":
-                    ext = ".zmx";  label = "ZEMAX";    writer = ZmxWriter.Write;      break;
-                case "oslo":     case "len":
-                    ext = ".len";  label = "OSLO";     writer = OsloWriter.Write;     break;
-                case "codev":    case "seq":
-                    ext = ".seq";  label = "Code V";   writer = CodeVWriter.Write;    break;
-                case "optalix":  case "otx":
-                    ext = ".otx";  label = "Optalix";  writer = OptalixWriter.Write;  break;
-                default:
-                    return $"Unknown format '{format}'. "
-                         + "Valid: lhlt, optiland (json), zemax (zmx), oslo (len), codev (seq), optalix (otx).";
-            }
+            if (!LensExport.Formats.TryGetValue(fmt, out var fmtInfo))
+                return $"Unknown format '{format}'. "
+                     + "Valid: lhlt, optiland (json), zemax (zmx), oslo (len), codev (seq), optalix (otx).";
+            string ext = fmtInfo.Ext;
+            string label = fmtInfo.Label;
 
             try
             {
@@ -240,7 +234,8 @@ namespace LensHH.StockMcp.Tools
 
                 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(dst))!);
 
-                if (writer == null && !reversed)
+                var notes = new List<string>();
+                if (label == "lhlt" && !reversed)
                 {
                     // lhlt + non-reversed = catalog passthrough, byte-copy
                     File.Copy(src, dst, overwrite: true);
@@ -250,17 +245,16 @@ namespace LensHH.StockMcp.Tools
                     LhltFile lens = LhltReader.Read(src);
                     if (reversed)
                         lens = LensReversal.Reverse(lens);
-
-                    if (writer == null)
-                        LhltWriter.Write(lens, dst);  // lhlt + reversed
-                    else
-                        writer(lens, dst);            // any non-lhlt format
+                    notes = LensExport.Write(lens, fmt, dst, GlassCatalogManager.Bundled);
                 }
 
                 long size = new FileInfo(dst).Length;
                 string orient = reversed ? " (reversed)" : "";
-                return $"Exported {resolvedVendor}/{partNumber}{orient} to {label} format.\n"
-                     + $"  source: {src}\n  dest:   {dst}\n  size:   {size} bytes";
+                string msg = $"Exported {resolvedVendor}/{partNumber}{orient} to {label} format.\n"
+                           + $"  source: {src}\n  dest:   {dst}\n  size:   {size} bytes";
+                foreach (var n in notes)
+                    msg += "\n" + n;
+                return msg;
             }
             catch (Exception ex)
             {

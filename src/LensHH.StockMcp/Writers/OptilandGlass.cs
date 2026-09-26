@@ -1,0 +1,186 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Text;
+using LensHH.StockMcp.Glass;
+
+namespace LensHH.StockMcp.Writers
+{
+    /// <summary>
+    /// Glass as Optiland needs it written, and read back.
+    ///
+    /// <para><b>A bare glass name is not safe in Optiland.</b> Optiland finds a <c>Material</c> by a
+    /// fuzzy search over the refractiveindex.info database. Its default policy takes the nearest
+    /// name, from any catalog, with only a warning:</para>
+    /// <list type="bullet">
+    /// <item>Of the glasses in the catalogs LensHH-LT ships, 96 Schott and 146 Sumita names
+    /// resolve that way to a different glass.</item>
+    /// <item>About 800 names are not in Optiland's database at all.</item>
+    /// </list>
+    ///
+    /// <para>Naming the catalog is not enough either. Optiland also files glasses under groups of
+    /// equivalents: its "BK7" group holds Schott's N-BK7, Ohara's S-BSL7, CDGM's H-K9L and
+    /// others, and "SF10" and "BAK1" are groups too. So BK7 in Schott's catalog answers to
+    /// N-BK7, a different glass.</para>
+    ///
+    /// <para><b>So each glass is written in two parts.</b></para>
+    /// <list type="bullet">
+    /// <item>Beside the lens file, the glass's own dispersion data is written as a
+    /// refractiveindex.info <c>.yml</c>. It goes in a folder named for its catalog, prefixed
+    /// <c>lenshh-</c> (<c>lenshh-schott</c>, <c>lenshh-ohara</c>). That is Optiland's user-catalog
+    /// layout, and the names are ones its own database does not use.</item>
+    /// <item>In the lens file, a <c>Material</c> names that catalog and has
+    /// <c>match_policy: "strict"</c>. Optiland then uses exactly the index LensHH-LT used, or,
+    /// if the catalogs were not installed, stops with an error naming the one it is missing. It
+    /// never substitutes another glass.</item>
+    /// </list>
+    ///
+    /// <para>Every AGF dispersion formula has an exact refractiveindex.info equivalent:</para>
+    /// <list type="bullet">
+    /// <item>the Sellmeier forms as formula 2;</item>
+    /// <item>the Schott and Extended polynomials as formula 3;</item>
+    /// <item>Sellmeier 2 and the two Handbook of Optics forms as formula 4;</item>
+    /// <item>Conrady as formula 5;</item>
+    /// <item>Herzberger as formula 7.</item>
+    /// </list>
+    /// </summary>
+    public static class OptilandGlass
+    {
+        /// <summary>
+        /// Where Optiland reads user catalogs: <c>~/.optiland/catalogs</c>, which its material
+        /// registry looks in when first used in a session (<c>Path.home()</c> in Python: the
+        /// user profile folder on Windows, <c>$HOME</c> elsewhere, which is what .NET's
+        /// <see cref="Environment.SpecialFolder.UserProfile"/> gives). Optiland has no setting
+        /// to move it.
+        /// </summary>
+        public static string UserCatalogsFolder =>
+            UserCatalogsFolderOverride
+            ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".optiland", "catalogs");
+
+        /// <summary>For tests: a folder to use instead of <see cref="UserCatalogsFolder"/>.</summary>
+        public static string? UserCatalogsFolderOverride { get; set; }
+
+        /// <summary>What the catalogs written for Optiland are prefixed with.</summary>
+        public const string CatalogPrefix = "lenshh-";
+
+        /// <summary>The catalog one of ours is written to for Optiland.</summary>
+        public static string DataCatalog(string catalog) => CatalogPrefix + catalog.ToLowerInvariant();
+
+        /// <summary>
+        /// Optiland's own name for one of our catalogs, for a glass whose data we do not have. We
+        /// split Corning in two (CORNING_B and CORNING_FS); Optiland keeps one <c>corning</c>
+        /// catalog.
+        /// </summary>
+        public static string VendorCatalog(string catalog)
+        {
+            if (catalog.StartsWith("CORNING", StringComparison.OrdinalIgnoreCase)) return "corning";
+            return catalog.ToLowerInvariant();
+        }
+
+        /// <summary>Our name for a catalog an Optiland file names: one written by
+        /// <see cref="DataCatalog"/> loses its prefix.</summary>
+        public static string FromOptilandCatalog(string catalog) =>
+            catalog.StartsWith(CatalogPrefix, StringComparison.OrdinalIgnoreCase)
+                ? catalog.Substring(CatalogPrefix.Length) : catalog;
+
+        /// <summary>
+        /// Whether a glass name can be a file name, which Optiland's user catalogs require:
+        /// the file's name is the glass's name.
+        /// </summary>
+        public static bool IsFileName(string name) =>
+            name.Length > 0 && name.IndexOfAny(Path.GetInvalidFileNameChars()) < 0
+            && name.IndexOfAny(new[] { '/', '\\', ':', '*', '?', '"', '<', '>', '|' }) < 0
+            && name.Trim() == name && name != "." && name != "..";
+
+        /// <summary>
+        /// The refractiveindex.info formula and coefficients that give exactly this glass's
+        /// index, or null for a formula that has none (no AGF formula lacks one).
+        /// </summary>
+        public static (int Formula, double[] Coefficients)? Dispersion(GlassData g)
+        {
+            double C(int i) => i < g.Coefficients.Length ? g.Coefficients[i] : 0.0;
+            switch (g.DispersionFormula)
+            {
+                case 1: // Schott: n^2 = a0 + a1 L^2 + a2 L^-2 + ... + a5 L^-8
+                    return (3, new[] { C(0), C(1), 2, C(2), -2, C(3), -4, C(4), -6, C(5), -8 });
+                case 2: // Sellmeier 1
+                    return (2, new[] { 0.0, C(0), C(1), C(2), C(3), C(4), C(5) });
+                case 3: // Herzberger: the same form, with the same 0.028
+                    return (7, new[] { C(0), C(1), C(2), C(3), C(4), C(5) });
+                case 4: // Sellmeier 2: 1 + A + B1 L^2/(L^2 - l1^2) + B2/(L^2 - l2^2)
+                    return (4, new[] { 1.0 + C(0), C(1), 2, C(2), 2, C(3), 0, C(4), 2 });
+                case 5: // Conrady
+                    return (5, new[] { C(0), C(1), -1, C(2), -3.5 });
+                case 6: // Sellmeier 3
+                    return (2, new[] { 0.0, C(0), C(1), C(2), C(3), C(4), C(5), C(6), C(7) });
+                case 7: // Handbook of Optics 1: A + B/(L^2 - C) - D L^2
+                    return (4, new[] { C(0), C(1), 0, C(2), 1, 0, 0, 0, 1, -C(3), 2 });
+                case 8: // Handbook of Optics 2: A + B L^2/(L^2 - C) - D L^2
+                    return (4, new[] { C(0), C(1), 2, C(2), 1, 0, 0, 0, 1, -C(3), 2 });
+                case 9: // Sellmeier 4: A + B L^2/(L^2 - C) + D L^2/(L^2 - E)
+                    return (2, new[] { C(0) - 1.0, C(1), C(2), C(3), C(4) });
+                case 10: // Extended: Schott continued to L^-10 and L^-12
+                    return (3, new[] { C(0), C(1), 2, C(2), -2, C(3), -4, C(4), -6, C(5), -8, C(6), -10, C(7), -12 });
+                case 11: // Sellmeier 5
+                    return (2, new[] { 0.0, C(0), C(1), C(2), C(3), C(4), C(5), C(6), C(7), C(8), C(9) });
+                case 12: // Extended 2: Schott plus L^4 and L^6
+                    return (3, new[] { C(0), C(1), 2, C(2), -2, C(3), -4, C(4), -6, C(5), -8, C(6), 4, C(7), 6 });
+                case 13: // Extended 3: a0 + a1 L^2 + a2 L^4 + a3 L^-2 + ... + a8 L^-12
+                    return (3, new[] { C(0), C(1), 2, C(2), 4, C(3), -2, C(4), -4, C(5), -6, C(6), -8, C(7), -10, C(8), -12 });
+                default:
+                    return null;
+            }
+        }
+
+        /// <summary>A refractiveindex.info material file for one dispersion.</summary>
+        public static string Yml(string description, int formula, double[] coefficients,
+                                 double lambdaMin, double lambdaMax)
+        {
+            var inv = CultureInfo.InvariantCulture;
+            var sb = new StringBuilder();
+            sb.Append("REFERENCES: \"").Append(description.Replace("\"", "'")).Append("\"\n");
+            sb.Append("DATA:\n");
+            sb.Append("  - type: formula ").Append(formula.ToString(inv)).Append('\n');
+            sb.Append("    wavelength_range: ").Append(lambdaMin.ToString("R", inv)).Append(' ')
+              .Append(lambdaMax.ToString("R", inv)).Append('\n');
+            sb.Append("    coefficients:");
+            foreach (var c in coefficients) sb.Append(' ').Append(c.ToString("R", inv));
+            sb.Append('\n');
+            return sb.ToString();
+        }
+
+        /// <summary>The "readme" written into the folder of glasses beside a lens file.</summary>
+        public static string ReadMe(string lensFile, IEnumerable<string> catalogs)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"The glasses of {lensFile}, as LensHH-LT computes them.");
+            sb.AppendLine();
+            sb.AppendLine("Each folder is an Optiland user catalog: one refractiveindex.info .yml per glass,");
+            sb.AppendLine("holding that glass's dispersion data exactly. The lens file names each glass with");
+            sb.AppendLine("one of these catalogs and match_policy \"strict\", so Optiland uses exactly these");
+            sb.AppendLine("glasses, and never substitutes another.");
+            sb.AppendLine();
+            sb.AppendLine("LensHH-LT installed them for Optiland on the machine it exported from, in");
+            sb.AppendLine("~/.optiland/catalogs/ (on Windows, %USERPROFILE%\\.optiland\\catalogs\\); Optiland");
+            sb.AppendLine("loads them when it starts. On another machine, or another account, copy the");
+            sb.AppendLine("folders here into that folder. Folders of the same name from other lenses merge:");
+            sb.AppendLine("a glass is the same file in each.");
+            sb.AppendLine();
+            sb.AppendLine("Or load them in the session, before loading the lens:");
+            sb.AppendLine("    from optiland.materials.registry import MaterialRegistry");
+            sb.AppendLine("    for d in [" + string.Join(", ", ToPython(catalogs)) + "]:");
+            sb.AppendLine("        MaterialRegistry.instance().load_catalog(\"<this folder>/\" + d)");
+            sb.AppendLine("Load a catalog once per session: loaded again, from another lens's folder, each of");
+            sb.AppendLine("its glasses has two entries, and a strict lookup refuses both.");
+            sb.AppendLine();
+            sb.AppendLine("Without them, Optiland stops with an error naming the catalog it is missing.");
+            return sb.ToString();
+        }
+
+        private static IEnumerable<string> ToPython(IEnumerable<string> names)
+        {
+            foreach (var n in names) yield return "\"" + n + "\"";
+        }
+    }
+}

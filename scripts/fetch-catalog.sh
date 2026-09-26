@@ -56,10 +56,12 @@ fi
 
 SIZE=$(du -h "$DB" | awk '{print $1}')
 COUNT=$(find "$DEST/Lenses" -name '*.lhlt' 2>/dev/null | wc -l | awk '{print $1}')
+GLASS_COUNT=$(find "$DEST/Glass" -name '*.AGF' 2>/dev/null | wc -l | awk '{print $1}')
 
 echo
 echo "Catalog installed to: $DEST"
 echo "  stock-lens-catalog.sqlite  $SIZE"
 echo "  Lenses/*.lhlt              $COUNT files"
+echo "  Glass/*.AGF                $GLASS_COUNT catalogs"
 echo
 echo "Point your MCP at it via:  export LENSHH_CATALOGS_DIR=\"$(cd "$DEST" && pwd)\""

@@ -8,7 +8,7 @@
 #       Contains LensHH.StockMcp + transitive deps + catalogs/ + a
 #       short README. User needs .NET 8 runtime on their machine.
 #   release\catalogs.zip
-#       Standalone catalog (SQLite + Lenses/*.lhlt). Unversioned filename
+#       Standalone catalog (SQLite + Lenses/*.lhlt + Glass/*.AGF). Unversioned filename
 #       so scripts/fetch-catalog.{sh,ps1} can always hit
 #       /releases/latest/download/catalogs.zip on GitHub.
 #
@@ -37,11 +37,15 @@ $CatalogSource = [System.IO.Path]::GetFullPath($CatalogSource)
 
 $db = Join-Path $CatalogSource "stock-lens-catalog.sqlite"
 $lensesDir = Join-Path $CatalogSource "Lenses"
+$glassDir = Join-Path $CatalogSource "Glass"
 if (-not (Test-Path $db)) {
     Write-Error "Catalog source missing stock-lens-catalog.sqlite at: $CatalogSource"
 }
 if (-not (Test-Path $lensesDir)) {
     Write-Error "Catalog source missing Lenses\ at: $CatalogSource"
+}
+if (-not (Test-Path (Join-Path $glassDir "*.AGF"))) {
+    Write-Error "Catalog source missing Glass\*.AGF at: $CatalogSource"
 }
 
 Write-Host "=== StockLensDatabaseMCP release $Version ===" -ForegroundColor Cyan
@@ -75,6 +79,10 @@ $null = robocopy $lensesDir (Join-Path $stagingCatalogs "Lenses") *.lhlt /S /NFL
 # robocopy's exit codes 0-7 are success (8+ = failure); explicitly accept
 if ($LASTEXITCODE -ge 8) { Write-Error "robocopy of Lenses/ failed (exit $LASTEXITCODE)" }
 $LASTEXITCODE = 0
+# The glass catalogs: the exporters give each glass as its catalog has it (Code V private
+# glass, Optiland refractiveindex.info data), and name it with its catalog.
+New-Item -ItemType Directory -Force -Path (Join-Path $stagingCatalogs "Glass") | Out-Null
+Copy-Item (Join-Path $glassDir "*.AGF") (Join-Path $stagingCatalogs "Glass")
 
 # Drop a tiny README in the tarball
 $tarReadmePath = Join-Path $staging "README-UNIX.md"

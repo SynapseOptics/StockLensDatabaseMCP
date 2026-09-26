@@ -9,6 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LensHH.StockMcp", "src\Lens
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConfigureLensHHStockMcp", "src\ConfigureLensHHStockMcp\ConfigureLensHHStockMcp.csproj", "{9286042D-F9A0-4033-9217-5B96F67D35D3}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LensHH.StockMcp.Tests", "tests\LensHH.StockMcp.Tests\LensHH.StockMcp.Tests.csproj", "{180CD339-C12E-42A6-88E9-2476C968E72F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,6 +47,18 @@ Global
 		{9286042D-F9A0-4033-9217-5B96F67D35D3}.Release|x64.Build.0 = Release|Any CPU
 		{9286042D-F9A0-4033-9217-5B96F67D35D3}.Release|x86.ActiveCfg = Release|Any CPU
 		{9286042D-F9A0-4033-9217-5B96F67D35D3}.Release|x86.Build.0 = Release|Any CPU
+		{180CD339-C12E-42A6-88E9-2476C968E72F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{180CD339-C12E-42A6-88E9-2476C968E72F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{180CD339-C12E-42A6-88E9-2476C968E72F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{180CD339-C12E-42A6-88E9-2476C968E72F}.Debug|x64.Build.0 = Debug|Any CPU
+		{180CD339-C12E-42A6-88E9-2476C968E72F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{180CD339-C12E-42A6-88E9-2476C968E72F}.Debug|x86.Build.0 = Debug|Any CPU
+		{180CD339-C12E-42A6-88E9-2476C968E72F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{180CD339-C12E-42A6-88E9-2476C968E72F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{180CD339-C12E-42A6-88E9-2476C968E72F}.Release|x64.ActiveCfg = Release|Any CPU
+		{180CD339-C12E-42A6-88E9-2476C968E72F}.Release|x64.Build.0 = Release|Any CPU
+		{180CD339-C12E-42A6-88E9-2476C968E72F}.Release|x86.ActiveCfg = Release|Any CPU
+		{180CD339-C12E-42A6-88E9-2476C968E72F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -50,5 +66,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{D1150377-F25F-42EC-B837-7D57722E0D88} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{9286042D-F9A0-4033-9217-5B96F67D35D3} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{180CD339-C12E-42A6-88E9-2476C968E72F} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

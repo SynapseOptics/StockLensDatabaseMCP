@@ -86,10 +86,12 @@ Source: "{#Assets}\icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; ── Stock-lens catalog (REQUIRED) ─────────────────────────────────
 ; SQLite + per-lens .lhlt prescriptions. Compile-time check above
 ; guarantees these sources exist at build time. We deliberately do
-; NOT pull _logs, csv-export, scripts, FilteredGlassCatalogues, or
-; Glass — only what the MCP needs at runtime.
+; NOT pull _logs, csv-export, scripts or FilteredGlassCatalogues - only
+; what the MCP needs at runtime. Glass\*.AGF are the catalogs the
+; exporters resolve each lens material against.
 Source: "{#SourceCatalogs}\stock-lens-catalog.sqlite"; DestDir: "{app}\catalogs"; Flags: ignoreversion
 Source: "{#SourceCatalogs}\Lenses\*.lhlt"; DestDir: "{app}\catalogs\Lenses"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceCatalogs}\Glass\*.AGF"; DestDir: "{app}\catalogs\Glass"; Flags: ignoreversion
 
 [Icons]
 ; Start Menu

@@ -24,3 +24,4 @@ installer/Output/
 
 # build-release.ps1 staging + final tarballs and catalog zips
 release/
+logs/

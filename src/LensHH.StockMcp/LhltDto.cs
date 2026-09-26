@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace LensHH.StockMcp
 {
@@ -33,6 +35,18 @@ namespace LensHH.StockMcp
         public bool IsAfocal { get; set; }
         public bool PenalizeVignetting { get; set; }
         public List<string> GlassCatalogs { get; set; } = new List<string>();
+
+        // Derived, for the format writers; never serialized.
+        [JsonIgnore]
+        public int PrimaryWavelengthIndex
+        {
+            get
+            {
+                for (int i = 0; i < Wavelengths.Count; i++)
+                    if (Wavelengths[i].IsPrimary) return i;
+                return 0;
+            }
+        }
     }
 
     public class LhltAperture
@@ -74,6 +88,14 @@ namespace LensHH.StockMcp
         public bool ConicVariable { get; set; }
         public bool[]? AsphericVariable { get; set; }
         public bool HasMarginalRaySolve { get; set; }
+
+        // Derived, for the format writers; never serialized.
+        [JsonIgnore]
+        public bool IsMirror => !string.IsNullOrEmpty(Material)
+            && Material.Equals("MIRROR", StringComparison.OrdinalIgnoreCase);
+
+        [JsonIgnore]
+        public double Curvature => double.IsInfinity(Radius) || Radius == 0.0 ? 0.0 : 1.0 / Radius;
     }
 
     public class LhltPickup

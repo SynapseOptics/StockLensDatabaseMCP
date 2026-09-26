@@ -34,13 +34,15 @@ and prescription export.
 | `format` | Output | Aliases | Notes |
 |---|---|---|---|
 | `lhlt` | `.lhlt` | — | Native LensHH-LT JSON. Byte-copied from the catalog when `reversed=false`; serialized from DTOs when `reversed=true`. |
-| `optiland` | `.json` | `json` | Optiland canonical JSON layout. |
+| `optiland` | `.json` | `json` | Optiland JSON. Each glass is named strictly, with a `lenshh-<catalog>` catalog, and its dispersion data is written as refractiveindex.info `.yml` files to a `<lens>_glass` folder beside the `.json` and installed into `~/.optiland/catalogs`, so Optiland uses exactly the glass the lens was designed with. |
 | `zemax` | `.zmx` | `zmx` | ZEMAX sequential-mode text, UTF-16 LE with BOM. |
-| `oslo` | `.len` | `len` | OSLO 5.10 lens file. |
-| `codev` | `.seq` | `seq` | Code V sequence file; Schott N-prefix dashes stripped. |
+| `oslo` | `.len` | `len` | OSLO lens file: primary wavelength first; EBR/ANG, or NAO/OBH for a finite object; only apertures that clip are checked. |
+| `codev` | `.seq` | `seq` | Code V sequence file. A glass from a catalog Code V ships is written `NAME_CATALOG` (e.g. `NBK7_SCHOTT`); any other (LightPath, plastics, crystals) as a private glass (`PRV`) with its index at each of the lens's wavelengths. |
 | `optalix` | `.otx` | `otx` | Optalix prescription. |
 
-All non-lhlt formats are engine-free: each reads the bundled `.lhlt` prescription via standalone DTOs and writes the target format directly. Output is byte-identical to the equivalent LensHH-LT export pipeline.
+OSLO, Code V and Optalix have no r² aspheric term, so a lens with one (72 surfaces in the catalog) is refused in those formats rather than written without it; Optiland and `.lhlt` carry it. A lens using a glass the bundled catalogs lack is still exported, with a note saying which glass.
+
+All non-lhlt formats are engine-free: each reads the bundled `.lhlt` prescription via standalone DTOs and writes the target format directly, following the same rules as LensHH-LT's exporters. Glasses are resolved by name against the bundled AGF glass catalogs (`catalogs/Glass`).
 
 ### Exporting a reversed lens
 
@@ -48,7 +50,7 @@ Pass `reversed=true` to `export_lens` to write the prescription flipped front-to
 
 ## Catalog location
 
-The catalog (`stock-lens-catalog.sqlite` plus ~7,600 per-lens `.lhlt` prescription files under `Lenses/`) **ships bundled with the installer** — installed to `{app}\catalogs\` automatically. You do not need a separate LensHH-LT install or download.
+The catalog (`stock-lens-catalog.sqlite`, ~7,600 per-lens `.lhlt` prescription files under `Lenses/`, and the AGF glass catalogs under `Glass/`) **ships bundled with the installer** — installed to `{app}\catalogs\` automatically. You do not need a separate LensHH-LT install or download.
 
 At startup the MCP server probes for `stock-lens-catalog.sqlite` in this order:
 
@@ -57,7 +59,7 @@ At startup the MCP server probes for `stock-lens-catalog.sqlite` in this order:
 3. `{exeDir}\catalogs\stock-lens-catalog.sqlite` (flat layout, useful for portable copies)
 4. `{exeDir}\..\..\..\..\..\catalogs\stock-lens-catalog.sqlite` (dev-tree layout from `bin\Debug\net8.0\`)
 
-The `.lhlt` files are resolved against `{catalogsDir}\Lenses\<vendor>\...\<part>.lhlt` using the relative path stored in the SQLite `lhlt_relpath` column.
+The `.lhlt` files are resolved against `{catalogsDir}\Lenses\<vendor>\...\<part>.lhlt` using the relative path stored in the SQLite `lhlt_relpath` column, and glasses against `{catalogsDir}\Glass\*.AGF`.
 
 ## Installing on Windows
 
@@ -157,8 +159,9 @@ claude mcp add --transport stdio --scope user `
 - **P1** — query + `.lhlt` export. **Done.**
 - **P2** — export to ZEMAX (`.zmx`), Code V (`.seq`), OSLO (`.len`),
   Optalix (`.otx`), and Optiland (`.json`) via a pure-DTO writer
-  layer that doesn't pull in the LensHH-LT engine. **Done** — byte-
-  identical to the engine writers across the verified sample.
+  layer that doesn't pull in the LensHH-LT engine. **Done** — every
+  catalog lens is exported in each format by the test suite, and a
+  sample read back with first-order properties unchanged.
 
 ## License
 

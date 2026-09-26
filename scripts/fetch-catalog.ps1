@@ -49,11 +49,13 @@ try {
 
     $size = "{0:N1} MB" -f ((Get-Item $db).Length / 1MB)
     $count = (Get-ChildItem -Path (Join-Path $dest "Lenses") -Filter *.lhlt -Recurse -ErrorAction SilentlyContinue).Count
+    $glassCount = (Get-ChildItem -Path (Join-Path $dest "Glass") -Filter *.AGF -ErrorAction SilentlyContinue).Count
 
     Write-Host ""
     Write-Host "Catalog installed to: $dest"
     Write-Host "  stock-lens-catalog.sqlite  $size"
     Write-Host "  Lenses/*.lhlt              $count files"
+    Write-Host "  Glass/*.AGF                $glassCount catalogs"
     Write-Host ""
     Write-Host "Point your MCP at it via:  `$env:LENSHH_CATALOGS_DIR = '$dest'"
 }
