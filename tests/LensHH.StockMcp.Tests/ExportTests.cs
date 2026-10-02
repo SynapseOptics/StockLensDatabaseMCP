@@ -120,8 +120,9 @@ namespace LensHH.StockMcp.Tests
             Assert.DoesNotContain(t, l => l.StartsWith("EBR ") || l.StartsWith("ANG "));
             // The object height is the field angle carried to the object: tan(2 deg) times the
             // distance from the object to the entrance pupil, which here is at surface 1 (the stop).
+            // OBH is the object point's y, and a positive angle comes from below the axis.
             double obh = double.Parse(t.First(l => l.StartsWith("OBH ")).Substring(4), System.Globalization.CultureInfo.InvariantCulture);
-            Assert.Equal(300 * Math.Tan(2 * Math.PI / 180), obh, 9);
+            Assert.Equal(-300 * Math.Tan(2 * Math.PI / 180), obh, 9);
         }
 
         [Fact]

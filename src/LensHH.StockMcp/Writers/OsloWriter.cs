@@ -82,11 +82,16 @@ namespace LensHH.StockMcp.Writers
             }
             else
             {
-                double objectToPupil = Math.Abs(Paraxial.EntrancePupilPosition(system, Indices()) + system.Surfaces[0].Thickness);
+                double objectToPupilSigned = Paraxial.EntrancePupilPosition(system, Indices()) + system.Surfaces[0].Thickness;
+                double objectToPupil = Math.Abs(objectToPupilSigned);
                 double nao = Math.Abs(Indices()[0]) * Math.Sin(Math.Atan(pupilRadius / objectToPupil));
+                // OSLO's OBH is the object point's y. A positive field angle aims the chief ray UP
+                // at the pupil, from an object BELOW the axis, so the height is negative - positive
+                // only when the pupil lies before the object. (This wrote +|d| tan(angle): the
+                // object on the wrong side, every image in OSLO mirrored.)
                 double obh = system.FieldType == FieldType.ObjectHeight
                     ? maxField
-                    : objectToPupil * Math.Tan(maxField * Math.PI / 180.0);
+                    : -objectToPupilSigned * Math.Tan(maxField * Math.PI / 180.0);
                 sb.AppendLine(string.Format(Inv, "NAO {0:R}", nao));
                 sb.AppendLine(string.Format(Inv, "OBH {0:R}", obh));
             }
