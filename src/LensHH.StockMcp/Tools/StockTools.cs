@@ -26,7 +26,8 @@ namespace LensHH.StockMcp.Tools
         [McpServerTool, Description(
             "Search the stock-lens catalog. All filters optional; only the provided "
             + "ones are applied. Returns one line per result: '<vendor> <part_number> "
-            + "<family> EFL=<mm> f/<fnum> D=<mm> n_elem=<count> | <description>'. The "
+            + "<family> EFL=<mm> f/<fnum> D=<mm> n_elem=<count> | <description>'; D and the "
+            + "diameter filters are the part's outer diameter (a 1-inch lens is 25.4). The "
             + "part_number can be passed to get_lens_details or export_lhlt. Use for "
             + "queries like 'find achromat doublets, EFL 45-55 mm, diameter <= 25.4'.")]
         public string SearchStock(
